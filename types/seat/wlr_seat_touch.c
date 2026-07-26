@@ -247,9 +247,10 @@ uint32_t wlr_seat_touch_notify_up(struct wlr_seat *seat, uint32_t time,
     	point->touch_id,
     	point->link.prev,
     	point->link.next);
-	touch_point_destroy(point);
+
 	uint32_t serial = grab->interface->up(grab, time, point);
 
+	touch_point_destroy(point);
 	return serial;
 }
 
