@@ -106,6 +106,18 @@ static void touch_point_clear_focus(struct wlr_touch_point *point) {
 }
 
 static void touch_point_destroy(struct wlr_touch_point *point) {
+    wlr_log(WLR_ERROR,
+        "DESTROY touch point=%p id=%d link prev=%p next=%p",
+        point,
+        point->touch_id,
+        point->link.prev,
+        point->link.next);
+    if (point->link.prev == NULL || point->link.next == NULL) {
+        wlr_log(WLR_ERROR,
+            "DOUBLE DESTROY or CORRUPTED LINK point=%p id=%d",
+            point, point->touch_id);
+	}
+	
 	wl_signal_emit_mutable(&point->events.destroy, point);
 
 	touch_point_clear_focus(point);
@@ -149,6 +161,14 @@ static struct wlr_touch_point *touch_point_create(
 		return NULL;
 	}
 
+	
+	wlr_log(WLR_ERROR,
+    	"CREATE touch point=%p id=%d link prev=%p next=%p",
+    	point,
+    	point->touch_id,
+    	point->link.prev,
+    	point->link.next);
+	
 	point->touch_id = touch_id;
 	point->surface = surface;
 	point->client = client;
@@ -163,6 +183,13 @@ static struct wlr_touch_point *touch_point_create(
 	wl_signal_add(&client->events.destroy, &point->client_destroy);
 	point->client_destroy.notify = touch_point_handle_client_destroy;
 	wl_list_insert(&seat->touch_state.touch_points, &point->link);
+	
+	wlr_log(WLR_ERROR,
+    	"INSERT touch point=%p id=%d link prev=%p next=%p",
+    	point,
+    	point->touch_id,
+    	point->link.prev,
+    	point->link.next);
 
 	return point;
 }
@@ -214,10 +241,15 @@ uint32_t wlr_seat_touch_notify_up(struct wlr_seat *seat, uint32_t time,
 	if (!point) {
 		return 0;
 	}
-
+	wlr_log(WLR_ERROR,
+    	"UP touch point=%p id=%d link prev=%p next=%p",
+    	point,
+    	point->touch_id,
+    	point->link.prev,
+    	point->link.next);
+	touch_point_destroy(point);
 	uint32_t serial = grab->interface->up(grab, time, point);
 
-	touch_point_destroy(point);
 	return serial;
 }
 
