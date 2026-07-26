@@ -40,8 +40,8 @@ jobs:
               git config --global --add safe.directory /buildd/sources
               echo "=== BEFORE BUILD ==="
               git describe --tags --always || true
-              git tag -l 'upstream/*' || true
-              git rev-parse upstream/0.47.0 || true
+              echo "git tag -l 'feature/*'"
+              git rev-parse feature/next/backport-0.18 || true
               echo "=== TOOLCHAIN ==="    
               set -x
               which aarch64-linux-gnu-gcc
@@ -62,10 +62,10 @@ jobs:
       - name: Show generated files
         run: ls -lah buildd-results
 
-      - name: Upload .deb packages
+      - name: Upload wlroots packages
         uses: actions/upload-artifact@v4
         with:
-          name: phoc-debs
+          name: wlroots-debs
           path: |
             buildd-results/*.deb
             buildd-results/*.ddeb
