@@ -25,6 +25,11 @@ static bool subsurface_is_synchronized(struct wlr_subsurface *subsurface) {
 static const struct wl_subsurface_interface subsurface_implementation;
 
 static void subsurface_destroy(struct wlr_subsurface *subsurface) {
+	g_debug("SUBSURFACE DESTROY: subsurface=%p surface=%p parent=%p resource=%p",
+		subsurface,
+		subsurface ? subsurface->surface : NULL,
+		subsurface ? subsurface->parent : NULL,
+		subsurface ? subsurface->resource : NULL);
 	if (subsurface->has_cache) {
 		wlr_surface_unlock_cached(subsurface->surface, subsurface->cached_seq);
 	}
@@ -39,6 +44,12 @@ static void subsurface_destroy(struct wlr_subsurface *subsurface) {
 	wl_list_remove(&subsurface->parent_destroy.link);
 
 	wl_resource_set_user_data(subsurface->resource, NULL);
+	
+	g_debug("SUBSURFACE DESTROY FREE: subsurface=%p surface=%p parent=%p resource=%p",
+		subsurface,
+		subsurface->surface,
+		subsurface->parent,
+		subsurface->resource);
 	free(subsurface);
 }
 
@@ -210,7 +221,15 @@ static void subsurface_role_commit(struct wlr_surface *surface) {
 }
 
 static void subsurface_role_destroy(struct wlr_surface *surface) {
+	
+	g_debug("SUBSURFACE ROLE DESTROY: surface=%p role=%p resource=%p",
+		surface,
+		surface ? surface->role : NULL,
+		surface ? surface->role_resource : NULL);
 	struct wlr_subsurface *subsurface = wlr_subsurface_try_from_wlr_surface(surface);
+	
+	g_debug("SUBSURFACE ROLE DESTROY: result subsurface=%p",
+		subsurface);
 	if (subsurface == NULL) {
 		return;
 	}
@@ -323,10 +342,40 @@ void subsurface_handle_parent_commit(struct wlr_subsurface *subsurface) {
 }
 
 struct wlr_subsurface *wlr_subsurface_try_from_wlr_surface(struct wlr_surface *surface) {
-	if (surface->role != &subsurface_role || surface->role_resource == NULL) {
+	g_debug("TRY_SUBSURFACE: surface=%p", surface);
+
+	if (surface == NULL) {
+		g_debug("TRY_SUBSURFACE: surface=NULL");
 		return NULL;
 	}
-	return subsurface_from_resource(surface->role_resource);
+
+	g_debug("TRY_SUBSURFACE: surface=%p role=%p expected_role=%p role_resource=%p",
+		surface,
+		surface->role,
+		&subsurface_role,
+		surface->role_resource);
+
+	if (surface->role != &subsurface_role) {
+		g_debug("TRY_SUBSURFACE: NOT_SUBSURFACE surface=%p role=%p",
+			surface, surface->role);
+		return NULL;
+	}
+
+	if (surface->role_resource == NULL) {
+		g_debug("TRY_SUBSURFACE: role_resource=NULL surface=%p",
+			surface);
+		return NULL;
+	}
+
+	struct wlr_subsurface *subsurface =
+		subsurface_from_resource(surface->role_resource);
+
+	g_debug("TRY_SUBSURFACE: RESULT surface=%p resource=%p subsurface=%p",
+		surface,
+		surface->role_resource,
+		subsurface);
+
+	return subsurface;
 }
 
 static void subcompositor_handle_destroy(struct wl_client *client,
