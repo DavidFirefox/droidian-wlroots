@@ -34,14 +34,6 @@ static void notification_handle_seat_destroy(struct wl_listener *listener,
 		void *data);
 #ifdef WLR_IDLE_NOTIFY_DEBUG
 
-static void debug_crash(const char *where,
-		struct wlr_idle_notification_v1 *notification) {
-	wlr_log(WLR_ERROR,
-		"IDLE DEBUG CRASH at %s: notification=%p",
-		where, notification);
-	abort();
-}
-
 static void debug_check_notification(
 		const char *where,
 		struct wlr_idle_notification_v1 *notification) {
@@ -94,6 +86,9 @@ static void debug_check_notification(
 	(void)where;
 	(void)notification;
 }
+
+#endif
+
 static void debug_check_seat_destroy_list(
 		const char *where,
 		struct wlr_seat *seat) {
@@ -144,7 +139,6 @@ static void debug_check_seat_destroy_list(
 		abort();
 	}
 }
-#endif
 
 static void resource_handle_destroy(struct wl_client *client,
 		struct wl_resource *resource) {
