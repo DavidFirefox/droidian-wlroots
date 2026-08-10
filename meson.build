@@ -8,6 +8,10 @@ project(
 		'c_std=c11',
 		'warning_level=2',
 		'werror=false',
+		'buildtype=debug',
+		'optimization=0',
+		'debug=true',
+	    'b_lto=false',
 	],
 )
 
@@ -24,6 +28,7 @@ add_project_arguments([
 	'-DWLR_USE_UNSTABLE',
 	'-DWLR_LITTLE_ENDIAN=@0@'.format(little_endian.to_int()),
 	'-DWLR_BIG_ENDIAN=@0@'.format(big_endian.to_int()),
+	'-DWLR_IDLE_NOTIFY_DEBUG',
 ], language: 'c')
 
 cc = meson.get_compiler('c')
