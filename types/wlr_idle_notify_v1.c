@@ -29,6 +29,122 @@ struct wlr_idle_notification_v1 {
 	struct wl_listener seat_destroy;
 };
 
+static void notification_handle_seat_destroy(struct wl_listener *listener,
+		void *data);
+#ifdef WLR_IDLE_NOTIFY_DEBUG
+
+static void debug_crash(const char *where,
+		struct wlr_idle_notification_v1 *notification) {
+	wlr_log(WLR_ERROR,
+		"IDLE DEBUG CRASH at %s: notification=%p",
+		where, notification);
+	abort();
+}
+
+static void debug_check_notification(
+		const char *where,
+		struct wlr_idle_notification_v1 *notification) {
+	if (notification == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: notification=NULL",
+			where);
+		abort();
+	}
+
+	if (notification->resource == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: notification=%p resource=NULL",
+			where, notification);
+		abort();
+	}
+
+	if (notification->seat == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: notification=%p seat=NULL",
+			where, notification);
+		abort();
+	}
+
+	if (notification->notifier == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: notification=%p notifier=NULL",
+			where, notification);
+		abort();
+	}
+
+	if (notification->seat_destroy.notify !=
+			notification_handle_seat_destroy) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: notification=%p "
+			"seat_destroy.notify=%p expected=%p",
+			where,
+			notification,
+			notification->seat_destroy.notify,
+			notification_handle_seat_destroy);
+		abort();
+	}
+}
+
+#else
+
+static void debug_check_notification(
+		const char *where,
+		struct wlr_idle_notification_v1 *notification) {
+	(void)where;
+	(void)notification;
+}
+static void debug_check_seat_destroy_list(
+		const char *where,
+		struct wlr_seat *seat) {
+	struct wl_list *list;
+
+	if (seat == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: seat=NULL",
+			where);
+		abort();
+	}
+
+	list = &seat->events.destroy.listener_list;
+
+	if (list->prev == NULL || list->next == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: destroy list has NULL "
+			"prev/next seat=%p list=%p prev=%p next=%p",
+			where,
+			seat,
+			list,
+			list->prev,
+			list->next);
+		abort();
+	}
+
+	if (list->next->prev != list) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: list.next->prev mismatch "
+			"seat=%p list=%p next=%p next.prev=%p",
+			where,
+			seat,
+			list,
+			list->next,
+			list->next->prev);
+		abort();
+	}
+
+	if (list->prev->next != list) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH at %s: list.prev->next mismatch "
+			"seat=%p list=%p prev=%p prev.next=%p",
+			where,
+			seat,
+			list,
+			list->prev,
+			list->prev->next);
+		abort();
+	}
+}
+#endif
+
 static void resource_handle_destroy(struct wl_client *client,
 		struct wl_resource *resource) {
 	wl_resource_destroy(resource);
@@ -57,6 +173,17 @@ static struct wlr_idle_notifier_v1 *notifier_from_resource(
 
 static void notification_set_idle(struct wlr_idle_notification_v1 *notification,
 		bool idle) {
+	
+	debug_check_notification("notification_set_idle", notification);
+
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG SET_IDLE notification=%p resource=%p seat=%p "
+		"idle=%d -> %d",
+		notification,
+		notification->resource,
+		notification->seat,
+		notification->idle,
+		idle);
 	if (notification->idle == idle) {
 		return;
 	}
@@ -72,6 +199,16 @@ static void notification_set_idle(struct wlr_idle_notification_v1 *notification,
 
 static int notification_handle_timer(void *data) {
 	struct wlr_idle_notification_v1 *notification = data;
+
+	debug_check_notification("notification_handle_timer", notification);
+
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG TIMER notification=%p resource=%p seat=%p timer=%p",
+		notification,
+		notification->resource,
+		notification->seat,
+		notification->timer);
+	
 	notification_set_idle(notification, true);
 	return 0;
 }
@@ -80,6 +217,54 @@ static void notification_destroy(struct wlr_idle_notification_v1 *notification) 
 	if (notification == NULL) {
 		return;
 	}
+
+
+	debug_check_notification("notification_destroy ENTRY", notification);
+
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG DESTROY notification=%p resource=%p seat=%p "
+		"timer=%p link=%p/%p seat_destroy=%p/%p",
+		notification,
+		notification->resource,
+		notification->seat,
+		notification->timer,
+		notification->link.prev,
+		notification->link.next,
+		notification->seat_destroy.link.prev,
+		notification->seat_destroy.link.next);
+
+	/*
+	 * Level 1: the notification must be linked before removal.
+	 */
+	if (notification->link.prev == NULL ||
+			notification->link.next == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH: invalid notification->link "
+			"notification=%p prev=%p next=%p",
+			notification,
+			notification->link.prev,
+			notification->link.next);
+		abort();
+	}
+
+	/*
+	 * Level 1: seat_destroy must still be linked.
+	 */
+	if (notification->seat_destroy.link.prev == NULL ||
+			notification->seat_destroy.link.next == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH: invalid seat_destroy.link "
+			"notification=%p prev=%p next=%p",
+			notification,
+			notification->seat_destroy.link.prev,
+			notification->seat_destroy.link.next);
+		abort();
+	}
+	
+	debug_check_seat_destroy_list(
+		"notification_destroy before remove",
+		notification->seat);
+	
 	wl_list_remove(&notification->link);
 	wl_list_remove(&notification->seat_destroy.link);
 	if (notification->timer != NULL) {
@@ -90,6 +275,16 @@ static void notification_destroy(struct wlr_idle_notification_v1 *notification) 
 }
 
 static void notification_reset_timer(struct wlr_idle_notification_v1 *notification) {
+	debug_check_notification("notification_reset_timer", notification);
+
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG RESET_TIMER notification=%p timer=%p "
+		"timeout=%u inhibited=%d",
+		notification,
+		notification->timer,
+		notification->timeout_ms,
+		notification->notifier->inhibited);
+	
 	if (notification->notifier->inhibited) {
 		notification_set_idle(notification, false);
 		if (notification->timer != NULL) {
@@ -107,6 +302,14 @@ static void notification_reset_timer(struct wlr_idle_notification_v1 *notificati
 }
 
 static void notification_handle_activity(struct wlr_idle_notification_v1 *notification) {
+	debug_check_notification("notification_handle_activity", notification);
+
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG ACTIVITY notification=%p resource=%p seat=%p",
+		notification,
+		notification->resource,
+		notification->seat);
+	
 	notification_set_idle(notification, false);
 	notification_reset_timer(notification);
 }
@@ -115,12 +318,34 @@ static void notification_handle_seat_destroy(struct wl_listener *listener,
 		void *data) {
 	struct wlr_idle_notification_v1 *notification =
 		wl_container_of(listener, notification, seat_destroy);
+	
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG SEAT_DESTROY listener=%p notification=%p data=%p",
+		listener,
+		notification,
+		data);
+
+	debug_check_notification("notification_handle_seat_destroy",
+		notification);
+	
 	notification_destroy(notification);
 }
 
 static void notification_handle_resource_destroy(struct wl_resource *resource) {
 	struct wlr_idle_notification_v1 *notification =
 		notification_from_resource(resource);
+
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG RESOURCE_DESTROY resource=%p notification=%p",
+		resource,
+		notification);
+
+	if (notification != NULL) {
+		debug_check_notification(
+			"notification_handle_resource_destroy",
+			notification);
+	}
+	
 	notification_destroy(notification);
 }
 
@@ -157,7 +382,19 @@ static void notifier_handle_get_idle_notification(struct wl_client *client,
 	notification->resource = resource;
 	notification->timeout_ms = timeout;
 	notification->seat = seat_client->seat;
+	
+	debug_check_notification(
+		"notifier_handle_get_idle_notification initialized",
+		notification);
 
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG CREATE notification=%p resource=%p seat=%p "
+		"notifier=%p timeout=%u",
+		notification,
+		notification->resource,
+		notification->seat,
+		notification->notifier,
+		notification->timeout_ms);
 	if (timeout > 0) {
 		struct wl_display *display = wl_client_get_display(client);
 		struct wl_event_loop *loop = wl_display_get_event_loop(display);
@@ -171,8 +408,99 @@ static void notifier_handle_get_idle_notification(struct wl_client *client,
 	}
 
 	notification->seat_destroy.notify = notification_handle_seat_destroy;
+
+#ifdef WLR_IDLE_NOTIFY_DEBUG
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG SIGNAL_ADD notification=%p listener=%p "
+		"seat=%p signal=%p signal.prev=%p signal.next=%p "
+		"listener.prev=%p listener.next=%p",
+		notification,
+		&notification->seat_destroy,
+		notification->seat,
+		&notification->seat->events.destroy.listener_list,
+		notification->seat->events.destroy.listener_list.prev,
+		notification->seat->events.destroy.listener_list.next,
+		notification->seat_destroy.link.prev,
+		notification->seat_destroy.link.next);
+
+	/*
+	 * A freshly initialized wl_listener must not already be linked.
+	 */
+	if (notification->seat_destroy.link.prev != NULL ||
+			notification->seat_destroy.link.next != NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH: seat_destroy listener already linked "
+			"notification=%p listener=%p prev=%p next=%p",
+			notification,
+			&notification->seat_destroy,
+			notification->seat_destroy.link.prev,
+			notification->seat_destroy.link.next);
+		abort();
+	}
+
+	/*
+	 * The signal list itself must be internally consistent.
+	 */
+	if (notification->seat->events.destroy.listener_list.next != NULL &&
+			notification->seat->events.destroy.listener_list.next->prev !=
+			&notification->seat->events.destroy.listener_list) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH: corrupted signal.next->prev "
+			"signal=%p next=%p next.prev=%p",
+			&notification->seat->events.destroy.listener_list,
+			notification->seat->events.destroy.listener_list.next,
+			notification->seat->events.destroy.listener_list.next->prev);
+		abort();
+	}
+
+	if (notification->seat->events.destroy.listener_list.prev != NULL &&
+			notification->seat->events.destroy.listener_list.prev->next !=
+			&notification->seat->events.destroy.listener_list) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH: corrupted signal.prev->next "
+			"signal=%p prev=%p prev.next=%p",
+			&notification->seat->events.destroy.listener_list,
+			notification->seat->events.destroy.listener_list.prev,
+			notification->seat->events.destroy.listener_list.prev->next);
+		abort();
+	}
+#endif
+	
+	debug_check_seat_destroy_list(
+		"notifier_handle_get_idle_notification before signal_add",
+		notification->seat);
+	
 	wl_signal_add(&seat_client->seat->events.destroy, &notification->seat_destroy);
 
+	
+	debug_check_seat_destroy_list(
+		"notifier_handle_get_idle_notification after signal_add",
+		notification->seat);
+	
+#ifdef WLR_IDLE_NOTIFY_DEBUG
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG SIGNAL_ADD DONE notification=%p listener=%p "
+		"prev=%p next=%p signal.prev=%p signal.next=%p",
+		notification,
+		&notification->seat_destroy,
+		notification->seat_destroy.link.prev,
+		notification->seat_destroy.link.next,
+		notification->seat->events.destroy.listener_list.prev,
+		notification->seat->events.destroy.listener_list.next);
+
+	if (notification->seat_destroy.link.prev == NULL ||
+			notification->seat_destroy.link.next == NULL) {
+		wlr_log(WLR_ERROR,
+			"IDLE DEBUG CRASH: wl_signal_add produced invalid listener "
+			"notification=%p listener=%p prev=%p next=%p",
+			notification,
+			&notification->seat_destroy,
+			notification->seat_destroy.link.prev,
+			notification->seat_destroy.link.next);
+		abort();
+	}
+#endif
+	
 	wl_resource_set_user_data(resource, notification);
 	wl_list_insert(&notifier->notifications, &notification->link);
 
