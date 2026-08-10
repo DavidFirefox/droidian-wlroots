@@ -3,6 +3,7 @@
 #include <wlr/types/wlr_idle_notify_v1.h>
 #include <wlr/types/wlr_seat.h>
 #include "ext-idle-notify-v1-protocol.h"
+#include "util/log.h"
 
 #define IDLE_NOTIFIER_VERSION 1
 
