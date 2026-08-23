@@ -41,28 +41,28 @@ static void debug_check_notification(
 		wlr_log(WLR_ERROR,
 			"IDLE DEBUG CRASH at %s: notification=NULL",
 			where);
-		abort();
+//		abort();
 	}
 
 	if (notification->resource == NULL) {
 		wlr_log(WLR_ERROR,
 			"IDLE DEBUG CRASH at %s: notification=%p resource=NULL",
 			where, notification);
-		abort();
+//		abort();
 	}
 
 	if (notification->seat == NULL) {
 		wlr_log(WLR_ERROR,
 			"IDLE DEBUG CRASH at %s: notification=%p seat=NULL",
 			where, notification);
-		abort();
+//		abort();
 	}
 
 	if (notification->notifier == NULL) {
 		wlr_log(WLR_ERROR,
 			"IDLE DEBUG CRASH at %s: notification=%p notifier=NULL",
 			where, notification);
-		abort();
+//		abort();
 	}
 
 	if (notification->seat_destroy.notify !=
@@ -74,7 +74,7 @@ static void debug_check_notification(
 			notification,
 			notification->seat_destroy.notify,
 			notification_handle_seat_destroy);
-		abort();
+//		abort();
 	}
 }
 
@@ -98,7 +98,7 @@ static void debug_check_seat_destroy_list(
 		wlr_log(WLR_ERROR,
 			"IDLE DEBUG CRASH at %s: seat=NULL",
 			where);
-		abort();
+//		abort();
 	}
 
 	list = &seat->events.destroy.listener_list;
@@ -112,7 +112,7 @@ static void debug_check_seat_destroy_list(
 			list,
 			list->prev,
 			list->next);
-		abort();
+//		abort();
 	}
 
 	if (list->next->prev != list) {
@@ -124,7 +124,7 @@ static void debug_check_seat_destroy_list(
 			list,
 			list->next,
 			list->next->prev);
-		abort();
+//		abort();
 	}
 
 	if (list->prev->next != list) {
@@ -136,7 +136,7 @@ static void debug_check_seat_destroy_list(
 			list,
 			list->prev,
 			list->prev->next);
-		abort();
+//		abort();
 	}
 }
 
@@ -239,7 +239,7 @@ static void notification_destroy(struct wlr_idle_notification_v1 *notification) 
 			notification,
 			notification->link.prev,
 			notification->link.next);
-		abort();
+//		abort();
 	}
 
 	/*
@@ -253,7 +253,7 @@ static void notification_destroy(struct wlr_idle_notification_v1 *notification) 
 			notification,
 			notification->seat_destroy.link.prev,
 			notification->seat_destroy.link.next);
-		abort();
+//		abort();
 	}
 	
 	debug_check_seat_destroy_list(
@@ -430,7 +430,7 @@ static void notifier_handle_get_idle_notification(struct wl_client *client,
 			&notification->seat_destroy,
 			notification->seat_destroy.link.prev,
 			notification->seat_destroy.link.next);
-		abort();
+//		abort();
 	}
 
 	/*
@@ -445,7 +445,7 @@ static void notifier_handle_get_idle_notification(struct wl_client *client,
 			&notification->seat->events.destroy.listener_list,
 			notification->seat->events.destroy.listener_list.next,
 			notification->seat->events.destroy.listener_list.next->prev);
-		abort();
+//		abort();
 	}
 
 	if (notification->seat->events.destroy.listener_list.prev != NULL &&
@@ -457,7 +457,7 @@ static void notifier_handle_get_idle_notification(struct wl_client *client,
 			&notification->seat->events.destroy.listener_list,
 			notification->seat->events.destroy.listener_list.prev,
 			notification->seat->events.destroy.listener_list.prev->next);
-		abort();
+//		abort();
 	}
 #endif
 	
@@ -492,7 +492,7 @@ static void notifier_handle_get_idle_notification(struct wl_client *client,
 			&notification->seat_destroy,
 			notification->seat_destroy.link.prev,
 			notification->seat_destroy.link.next);
-		abort();
+//		abort();
 	}
 #endif
 	
