@@ -213,7 +213,12 @@ static void notification_destroy(struct wlr_idle_notification_v1 *notification) 
 		return;
 	}
 
-
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG DESTROY notification=%p seat_destroy=%p notify=%p",
+		(void *)notification,
+		(void *)&notification->seat_destroy,
+		(void *)notification->seat_destroy.notify);
+	
 	debug_check_notification("notification_destroy ENTRY", notification);
 
 	wlr_log(WLR_DEBUG,
@@ -266,6 +271,13 @@ static void notification_destroy(struct wlr_idle_notification_v1 *notification) 
 		wl_event_source_remove(notification->timer);
 	}
 	wl_resource_set_user_data(notification->resource, NULL); // make inert
+
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG FREE notification=%p seat_destroy=%p notify=%p",
+		(void *)notification,
+		(void *)&notification->seat_destroy,
+		(void *)notification->seat_destroy.notify);
+	
 	free(notification);
 }
 
@@ -467,6 +479,11 @@ static void notifier_handle_get_idle_notification(struct wl_client *client,
 	
 	wl_signal_add(&seat_client->seat->events.destroy, &notification->seat_destroy);
 
+	wlr_log(WLR_DEBUG,
+		"IDLE DEBUG ADD notification=%p seat_destroy=%p notify=%p",
+		(void *)notification,
+		(void *)&notification->seat_destroy,
+		(void *)notification->seat_destroy.notify);
 	
 	debug_check_seat_destroy_list(
 		"notifier_handle_get_idle_notification after signal_add",
