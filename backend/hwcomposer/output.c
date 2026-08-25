@@ -133,7 +133,11 @@ static void output_destroy(struct wlr_output *wlr_output) {
 	struct wlr_hwcomposer_output *output =
 		(struct wlr_hwcomposer_output *)wlr_output;
 	struct wlr_hwcomposer_backend *hwc_backend = output->hwc_backend;
-
+	
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: OUTPUT DESTROY BEGIN output=%p wlr_output=%p display=%" PRIu64,
+		output, wlr_output, output->hwc_display_id);
+	
 	// Disable vsync
 	hwc_backend->impl->vsync_control(output, false);
 
@@ -145,6 +149,10 @@ static void output_destroy(struct wlr_output *wlr_output) {
 		wlr_log(WLR_ERROR, "Unable to close vsync timer fd!");
 	}
 
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: OUTPUT LIST REMOVE output=%p",
+		output);
+	
 	wl_list_remove(&output->link);
 
 	if (output->vsync_timer) {
@@ -154,6 +162,10 @@ static void output_destroy(struct wlr_output *wlr_output) {
 	//wlr_egl_destroy_surface(&hwc_backend->egl, output->egl_surface);
 
 	hwc_backend->impl->destroy_output(output);
+	
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: OUTPUT DESTROY IMPL DONE output=%p",
+		output);
 }
 
 static const struct wlr_drm_format_set *output_get_formats(
@@ -179,9 +191,22 @@ static int signal_frame(int fd, uint32_t mask, void *data) {
 	struct wlr_hwcomposer_output *output = data;
 
 	uint64_t res;
+	
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: SIGNAL_FRAME output=%p should_destroy=%d",
+		output, output->should_destroy);
+	
 	if (read(fd, &res, sizeof(res)) > 0 && !output->should_destroy) {
+		wlr_log(WLR_INFO,
+			"HWC DEBUG: SIGNAL_FRAME -> SEND_FRAME output=%p",
+			output);
+		
 		wlr_output_send_frame(&output->wlr_output);
 	} else if (output->should_destroy) {
+		wlr_log(WLR_INFO,
+			"HWC DEBUG: SIGNAL_FRAME -> DESTROY output=%p",
+			output);
+		
 		wlr_output_destroy(&output->wlr_output);
 	}
 
@@ -215,9 +240,17 @@ void wlr_hwcomposer_output_schedule_destroy(struct wlr_output *wlr_output) {
 	struct wlr_hwcomposer_output *output =
 		(struct wlr_hwcomposer_output *)wlr_output;
 
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: OUTPUT DESTROY SCHEDULE output=%p wlr_output=%p display=%" PRIu64,
+		output, wlr_output, output->hwc_display_id);
+	
 	// Set should_destroy flag
 	output->should_destroy = true;
-
+	
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: OUTPUT DESTROY FLAG SET output=%p",
+		output);
+	
 	// Schedule a new frame. This shouldn't be racy since the only other
 	// place where we schedule a new frame is during commits - so in
 	// the worst case the timer would be rearmed (but since the flag
@@ -250,10 +283,20 @@ struct wlr_output *wlr_hwcomposer_add_output(struct wlr_backend *wlr_backend,
 	wlr_output_state_set_custom_mode(&state, output->hwc_width, output->hwc_height, refresh);
 	wlr_output_init(&output->wlr_output, &hwc_backend->backend, &output_impl,
 					hwc_backend->display, &state);
+
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: OUTPUT WLR INIT output=%p wlr_output=%p",
+		output, wlr_output);
+	
 	wlr_output_state_finish(&state);
 	wlr_log(WLR_INFO, "wlr_hwcomposer_add_output width=%d height=%d refresh=%d idle_time=%ld",
 			output->hwc_width, output->hwc_height, refresh, hwc_backend->idle_time);
-
+	
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: OUTPUT ADD display=%" PRIu64
+		" primary=%d output=%p backend=%p",
+		display, primary_display, output, hwc_backend);
+	
 	output->wlr_output.phys_width = output->hwc_phys_width;
 	output->wlr_output.phys_height = output->hwc_phys_height;
 	wlr_output->make = malloc(64 * sizeof(char));
@@ -290,7 +333,16 @@ struct wlr_output *wlr_hwcomposer_add_output(struct wlr_backend *wlr_backend,
 	if (hwc_backend->started) {
 		wl_event_source_timer_update(output->vsync_timer, output->frame_delay);
 		wlr_output_state_set_enabled(&state, true);
+		
+		wlr_log(WLR_INFO,
+			"HWC DEBUG: OUTPUT NEW_OUTPUT EMIT wlr_output=%p name=%s",
+			wlr_output, wlr_output->name);
+		
 		wl_signal_emit_mutable(&hwc_backend->backend.events.new_output, wlr_output);
+
+		wlr_log(WLR_INFO,
+			"HWC DEBUG: OUTPUT NEW_OUTPUT EMIT DONE wlr_output=%p",
+			wlr_output);
 	}
 
 	return wlr_output;
