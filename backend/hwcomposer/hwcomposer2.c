@@ -58,6 +58,10 @@ static void hwcomposer2_vsync_callback(HWC2EventListener* listener, int32_t sequ
 {
 	struct wlr_hwcomposer_backend_hwc2 *hwc2 = ((hwc_procs_v20 *)listener)->hwc2;
 
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: VSYNC display=%" PRIu64 " timestamp=%" PRId64,
+		(uint64_t)display, timestamp);
+	
 	hwc2->hwc_backend.hwc_vsync_last_timestamp = timestamp;
 }
 
