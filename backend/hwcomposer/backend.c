@@ -131,9 +131,14 @@ struct wlr_backend *wlr_hwcomposer_backend_create(struct wl_display *display) {
 
 	start_fake_surfaceflinger();
 
+	wlr_log(WLR_INFO, "HWC DEBUG: start_fake_surfaceflinger done");
+	
 	int hwc_version = HWC_DEVICE_API_VERSION_2_0;
 
 	hwc_backend = hwcomposer2_api_init(hwc_device);
+
+	wlr_log(WLR_INFO, "HWC DEBUG: hwcomposer2_api_init returned %p",
+		hwc_backend);
 
 	wlr_log(WLR_INFO, "HWC Version=%x\n", hwc_version);
 
@@ -168,7 +173,12 @@ struct wlr_backend *wlr_hwcomposer_backend_create(struct wl_display *display) {
 
 	// Register hwc callbacks
 	hwc_backend->impl->register_callbacks(hwc_backend);
+	
+	wlr_log(WLR_INFO, "HWC DEBUG: callbacks registered");
 
+	wlr_log(WLR_INFO, "HWC DEBUG: backend_create returning %p",
+	hwc_backend);
+	
 	return &hwc_backend->backend;
 }
 
@@ -179,6 +189,10 @@ void wlr_hwcomposer_backend_handle_hotplug(struct wlr_backend *wlr_backend,
 		(struct wlr_hwcomposer_backend *)wlr_backend;
 	struct wlr_hwcomposer_output *output, *tmp_output;
 
+	wlr_log(WLR_INFO,
+		"HWC DEBUG: HOTPLUG display=%" PRIu64 " connected=%d primary=%d",
+		display, connected, primary_display);
+	
 	if (connected) {
 		wlr_hwcomposer_add_output((struct wlr_backend *)hwc_backend, display,
 			primary_display);
